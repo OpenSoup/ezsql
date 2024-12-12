@@ -9,7 +9,7 @@ pip install --trusted-host 114.115.172.126 -i http://114.115.172.126:3141/simple
 ```python
 from ezsql import*
 ```
-即可正常使用该工具包
+即可正常使用该工具包  
 您可以像这样操作您的sqlite：
 ```python
 from ezsql import *
