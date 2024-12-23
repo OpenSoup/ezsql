@@ -3,7 +3,7 @@
 
 如果您的设备已安装pip,您可以打开命令行，并使用以下代码进行安装：  
 ```
-pip install --trusted-host 114.115.172.126 -i http://114.115.172.126:3141/simple/ ezsql
+pip install --trusted-host osoup.top -i http://osoup.top/simple ezsql
 ```
 随后在python代码开始处加入：
 ```python
