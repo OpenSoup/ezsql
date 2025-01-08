@@ -18,7 +18,7 @@ class SQBool:
         :param symbol: 运算符
         :param right:  运算项
         """
-        if symbol not in [">", "<", "=", ">=", "<=", "!=", "&", "|"]:
+        if symbol not in [">", "<", "=", ">=", "<=", "!=", "&", "|", "+", "-", "*", "/"]:
             raise SyntaxError(f"unknown symbol: {symbol}")
         self.left = left
         self.symbol = symbol
@@ -48,6 +48,35 @@ class SQBool:
     def __or__(self, other):
         return SQBool(self, "|", other)
 
+    # ==========加========== #
+    def __add__(self, other):
+        return SQBool(self, "+", other)
+
+    def __radd__(self, other):
+        return SQBool(other, "+", self)
+
+    # ==========减========== #
+    def __sub__(self, other):
+        return SQBool(self, "-", other)
+
+    def __rsub__(self, other):
+        return SQBool(other, "-", self)
+
+    # ==========乘========== #
+    def __mul__(self, other):
+        return SQBool(self, "*", other)
+
+    def __rmul__(self, other):
+        return SQBool(other, "*", self)
+
+    # ==========除========== #
+    def __truediv__(self, other):
+        return SQBool(self, "/", other)
+
+    def __rtruediv__(self, other):
+        return SQBool(other, "/", self)
+
+    # ====================== #
     def __str__(self):
         return f"({self.left} {self.symbol} {self.right})"
 
@@ -137,7 +166,7 @@ class EzCursor:
     def rm_table(self, *tables):
         """
         删除一个或多个表
-        :param args: 要删除的所有表的表名
+        :param tables: 要删除的所有表的表名
         :return: None
         """
         for table in tables:
@@ -298,6 +327,36 @@ class Column:
 
     def __or__(self, other):
         return SQBool(self, "|", other)
+
+    # ==========加========== #
+    def __add__(self, other):
+        return SQBool(self, "+", other)
+
+    def __radd__(self, other):
+        return SQBool(other, "+", self)
+
+    # ==========减========== #
+    def __sub__(self, other):
+        return SQBool(self, "-", other)
+
+    def __rsub__(self, other):
+        return SQBool(other, "-", self)
+
+    # ==========乘========== #
+    def __mul__(self, other):
+        return SQBool(self, "*", other)
+
+    def __rmul__(self, other):
+        return SQBool(other, "*", self)
+
+    # ==========除========== #
+    def __truediv__(self, other):
+        return SQBool(self, "/", other)
+
+    def __rtruediv__(self, other):
+        return SQBool(other, "/", self)
+
+    # ====================== #
 
     def __contains__(self, item):
         """
