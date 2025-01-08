@@ -7,6 +7,51 @@ from sqlite3 import *
 from hardType import *
 
 
+class SQBool:
+    """
+    数据库布尔类型，用于生成数据库布尔条件代码
+    """
+    def __init__(self, left, symbol, right):
+        """
+        初始化类，创建该类时调用
+        :param left:   被运算项
+        :param symbol: 运算符
+        :param right:  运算项
+        """
+        if symbol not in [">", "<", "=", ">=", "<=", "!=", "&", "|"]:
+            raise SyntaxError(f"unknown symbol: {symbol}")
+        self.left = left
+        self.symbol = symbol
+        self.right = right
+
+    def __gt__(self, other):
+        return SQBool(self, ">", other)
+
+    def __lt__(self, other):
+        return SQBool(self, "<", other)
+
+    def __eq__(self, other):
+        return SQBool(self, "=", other)
+
+    def __ge__(self, other):
+        return SQBool(self, ">=", other)
+
+    def __le__(self, other):
+        return SQBool(self, "<=", other)
+
+    def __ne__(self, other):
+        return SQBool(self, "!=", other)
+
+    def __and__(self, other):
+        return SQBool(self, "&", other)
+
+    def __or__(self, other):
+        return SQBool(self, "|", other)
+
+    def __str__(self):
+        return f"({self.left} {self.symbol} {self.right})"
+
+
 class EzCursor:
     """
     简化光标，让光标可以像python中的字典一样操作。
@@ -156,7 +201,7 @@ class EzList:
         列表可视化(使用时需注意，数据量大时会很消耗性能)
         :return: 由字符串组成的列表
         """
-        return str(RowMatcher(self, {}))
+        return str(RowMatcher(self, True))
 
     def ls_column(self) -> list:
         """
@@ -230,6 +275,30 @@ class Column:
         self.cursor = self.ez_cursor.cursor
         self.head = head
 
+    def __gt__(self, other):
+        return SQBool(self, ">", other)
+
+    def __lt__(self, other):
+        return SQBool(self, "<", other)
+
+    def __eq__(self, other):
+        return SQBool(self, "=", other)
+
+    def __ge__(self, other):
+        return SQBool(self, ">=", other)
+
+    def __le__(self, other):
+        return SQBool(self, "<=", other)
+
+    def __ne__(self, other):
+        return SQBool(self, "!=", other)
+
+    def __and__(self, other):
+        return SQBool(self, "&", other)
+
+    def __or__(self, other):
+        return SQBool(self, "|", other)
+
     def __contains__(self, item):
         """
         判断列中是否有某个元素，可以这样调用：item in Column
@@ -246,7 +315,7 @@ class Column:
         :param item: 匹配的内容
         :return: 行方法类
         """
-        return RowMatcher(self.ez_list, {self.head: item})
+        return RowMatcher(self.ez_list, (self == item))
 
     def __iter__(self):
         """
@@ -296,20 +365,19 @@ class RowMatcher:
     """
     用于匹配行的方法类
     """
-    def __init__(self, ez_list: EzList, static_items: dict):
+    def __init__(self, ez_list: EzList, match_bool):
         """
         初始化类，创建该类时调用
-        :param ez_list:       该行所属于的表格的方法类
-        :param static_items:  用于匹配的元素，格式：{head1: item, head2: item, ...}
+        :param ez_list:    该行所属于的表格的方法类
+        :param match_bool: 用于匹配元素的布尔运算式
         """
         check_type(ez_list, "ez_list", EzList)
-        check_type(static_items, "items", dict)
 
         self.ez_list = ez_list
         self.ez_cursor = self.ez_list.ez_cursor
         self.conn = self.ez_cursor.conn
         self.cursor = self.ez_cursor.cursor
-        self.static_items = static_items
+        self.bool = match_bool
 
     def __getitem__(self, item):
         """
@@ -317,15 +385,9 @@ class RowMatcher:
         :param item: 特定列的表头名称
         :return: 获取到的内容，格式：[item1, item2, ...]
         """
-        first = True
-        code = f"SELECT {item} FROM {self.ez_list.table}"
-        for i in self.static_items:
-            if first:
-                code += f"\nWHERE {i} = ?"
-                first = False
-            else:
-                code += f"\nAND {i} = ?"
-        self.ez_cursor.cursor.execute(code, [self.static_items[i] for i in self.static_items])
+        sql_bool = bool_in_sql(self.bool)
+        code = f"SELECT {item} FROM {self.ez_list.table} WHERE {sql_bool[0]}"
+        self.ez_cursor.cursor.execute(code, sql_bool[1])
         fetch_list = self.ez_cursor.cursor.fetchall()
         return [i[0] for i in fetch_list]
 
@@ -341,16 +403,9 @@ class RowMatcher:
         获得被匹配行的数量
         :return: 被匹配行的数量
         """
-        first = True
-        code = f"SELECT COUNT(*) FROM {self.ez_list.table} "
-        for i in self.static_items:
-            if first:
-                code += f"\nWHERE {i} = ?"
-                first = False
-            else:
-                code += f"\nAND {i} = ?"
-        code += ";"
-        self.cursor.execute(code, [self.static_items[i] for i in self.static_items])
+        sql_bool = bool_in_sql(self.bool)
+        code = f"SELECT COUNT(*) FROM {self.ez_list.table} WHERE {sql_bool[0]}"
+        self.cursor.execute(code, sql_bool[1])
         return self.cursor.fetchone()[0]
 
     def __setitem__(self, key, value):
@@ -360,16 +415,9 @@ class RowMatcher:
         :param value: 替换成的值
         :return: None
         """
-        first = True
-        code = f"UPDATE {self.ez_list.table} SET {key} = {value}"
-        for i in self.static_items:
-            if first:
-                code += f"\nWHERE {i} = ?"
-                first = False
-            else:
-                code += f"\nAND {i} = ?"
-        code += ";"
-        self.cursor.execute(code, [self.static_items[i] for i in self.static_items])
+        sql_bool = bool_in_sql(self.bool)
+        code = f"UPDATE {self.ez_list.table} SET {key} = {value} WHERE {sql_bool[0]}"
+        self.cursor.execute(code, sql_bool[1])
 
     def __str__(self):
         """
@@ -405,16 +453,9 @@ class RowMatcher:
         删除所有被匹配项
         :return: None
         """
-        first = True
-        code = f"DELETE FROM {self.ez_list.table} "
-        for i in self.static_items:
-            if first:
-                code += f"\nWHERE {i} = ?"
-                first = False
-            else:
-                code += f"\nAND {i} = ?"
-        code += ";"
-        self.cursor.execute(code, [self.static_items[i] for i in self.static_items])
+        sql_bool = bool_in_sql(self.bool)
+        code = f"DELETE FROM {self.ez_list.table} WHERE {sql_bool[0]}"
+        self.cursor.execute(code, sql_bool[1])
 
 
 class RowMatcherIter:
@@ -442,6 +483,35 @@ class RowMatcherIter:
             return r
         else:
             raise StopIteration
+
+
+def bool_in_sql(item):
+    """
+    将SQBool类型转换为sqlite条件代码，并返回带“?”的sqlite条件代码和对应的参数列表
+
+    :param item: 需要转换的SQBool实例或其他数据类型
+    :return: 一个元组，包含sqlite条件代码字符串和填在“?”处的参数列表
+    """
+    sql_args = []
+    if isinstance(item, SQBool):
+        # 递归处理左右两边
+        left = bool_in_sql(item.left)
+        right = bool_in_sql(item.right)
+
+        sql_args = left[1]+right[1]
+
+        # 处理运算符，将&和|转换为AND和OR
+        if item.symbol in ["&", "|"]:
+            operator = "AND" if item.symbol == "&" else "OR"
+            return f"({left[0]} {operator} {right[0]})", sql_args
+        else:
+            # 其他符号直接使用
+            return f"({left[0]} {item.symbol} {right[0]})", sql_args
+    elif isinstance(item, Column):
+        return item.head, []
+    else:
+        # 其他类型可能需要特殊处理，这里简单返回字符串表示
+        return "?", [item]
 
 
 if __name__ == '__main__':
