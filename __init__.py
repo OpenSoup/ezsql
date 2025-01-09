@@ -78,7 +78,8 @@ class SQBool:
 
     # ====================== #
     def __str__(self):
-        return f"({self.left} {self.symbol} {self.right})"
+        b = bool_in_sql(self)
+        return f"{b[0]}\n{b[1]}"
 
 
 class EzCursor:
@@ -171,6 +172,10 @@ class EzCursor:
         """
         for table in tables:
             self.cursor.execute(f"DROP TABLE {table};")
+
+    get_table = __getitem__
+
+    mk_table = __setitem__
 
 
 class EzList:
@@ -283,6 +288,8 @@ class EzList:
                 code += f", ?"
         code += ")"
         self.cursor.execute(code, [items[i] for i in items])
+
+    get_column = __getitem__
 
 
 class Column:
@@ -519,7 +526,7 @@ class RowMatcher:
 
 class RowMatcherIter:
     """
-    用于匹配行的方法类的迭代类，当便利类RowMathcer时(像这样：for i in RowMathcer)，将会使用该类。
+    用于匹配行的方法类的迭代类，当便利类RowMatcher时(像这样：for i in RowMatcher)，将会使用该类。
     便利中每次循环i都会为一列中所有被匹配项。
     """
     def __init__(self, row_matcher: RowMatcher):
