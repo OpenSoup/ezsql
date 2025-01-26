@@ -14,7 +14,7 @@
 如果您的设备已安装 `pip`，您可以打开命令行，并使用以下代码进行安装：
 
 ```bash
-pip install --trusted-host osoup.top -i http://osoup.top/simple ezsql
+pip install -i https://osoup.top/simple ezsql
 ```
 
 ## 在脚本中调用
